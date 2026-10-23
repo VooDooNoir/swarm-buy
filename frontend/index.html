@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Swarm Buy — Let AI Agents Debate Your Next Purchase</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --border: #30363d;
+    --text: #e6edf3; --muted: #8b949e;
+    --aria: #a371f7; --mack: #3fb950; --rivet: #d29922; --gold: #e3b341;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text);
+         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+         min-height: 100vh; padding: 24px 16px 64px; }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+  header { text-align: center; margin-bottom: 28px; }
+  header h1 { font-size: 2.6rem; letter-spacing: -1px; }
+  header h1 .cart { font-size: 2.2rem; }
+  header p { color: var(--muted); margin-top: 8px; font-size: 1.05rem; }
+  header p strong { color: var(--text); }
+
+  .ask { display: flex; gap: 10px; margin-bottom: 14px; }
+  .ask input { flex: 1; padding: 14px 16px; font-size: 1rem; border-radius: 10px;
+               border: 1px solid var(--border); background: var(--panel); color: var(--text); }
+  .ask input:focus { outline: none; border-color: var(--aria); }
+  .ask button { padding: 14px 28px; font-size: 1rem; font-weight: 700; border: none;
+                border-radius: 10px; background: var(--aria); color: #fff; cursor: pointer; }
+  .ask button:hover { filter: brightness(1.12); }
+  .ask button:disabled { opacity: .5; cursor: wait; }
+  .pills { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 30px; }
+  .pills button { padding: 8px 14px; border-radius: 999px; border: 1px solid var(--border);
+                 background: var(--panel); color: var(--muted); cursor: pointer; font-size: .9rem; }
+  .pills button:hover { color: var(--text); border-color: var(--muted); }
+
+  .round-label { font-size: .8rem; text-transform: uppercase; letter-spacing: 2px;
+                 color: var(--muted); margin: 26px 0 12px; text-align: center; }
+  .agents { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 800px) { .agents { grid-template-columns: 1fr; } }
+  .agent { background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+           padding: 18px; min-height: 220px; border-top: 3px solid var(--muted); }
+  .agent.aria { border-top-color: var(--aria); }
+  .agent.mack { border-top-color: var(--mack); }
+  .agent.rivet { border-top-color: var(--rivet); }
+  .agent .who { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .agent .avatar { font-size: 1.8rem; }
+  .agent .who b { font-size: 1.05rem; }
+  .agent .who span { display: block; font-size: .8rem; color: var(--muted); font-weight: 400; }
+  .agent .status { font-size: .78rem; color: var(--muted); margin-bottom: 8px; min-height: 1.2em; }
+  .agent .transcript { font-size: .92rem; line-height: 1.55; white-space: pre-wrap; }
+  .typing::after { content: "▍"; animation: blink 0.8s infinite; color: var(--aria); }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .verdict { display: none; margin-top: 30px; background: linear-gradient(180deg, #1c1a12, var(--panel));
+             border: 1px solid var(--gold); border-radius: 16px; padding: 26px; }
+  .verdict.show { display: block; animation: drop .5s ease; }
+  @keyframes drop { from { transform: translateY(14px); opacity: 0; } }
+  .verdict .kicker { color: var(--gold); font-size: .8rem; text-transform: uppercase;
+                     letter-spacing: 2px; margin-bottom: 8px; }
+  .verdict h2 { font-size: 1.9rem; margin-bottom: 4px; }
+  .verdict .price { color: var(--gold); font-size: 1.3rem; font-weight: 700; margin-bottom: 12px; }
+  .verdict p.lead { font-size: 1.05rem; line-height: 1.6; margin-bottom: 16px; }
+  .verdict .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+  @media (max-width: 700px) { .verdict .cols { grid-template-columns: 1fr; } }
+  .verdict .fact { background: rgba(255,255,255,.03); border: 1px solid var(--border);
+                   border-radius: 10px; padding: 12px 14px; }
+  .verdict .fact b { display: block; font-size: .78rem; text-transform: uppercase;
+                     letter-spacing: 1px; color: var(--muted); margin-bottom: 6px; }
+  .verdict ul { margin: 6px 0 0 18px; font-size: .93rem; line-height: 1.6; }
+  .verdict .runner { color: var(--muted); font-size: .92rem; margin-top: 10px; }
+  .verdict .board { margin-top: 14px; font-size: .85rem; color: var(--muted); }
+  .verdict .board b { color: var(--text); }
+
+  .error { display: none; margin-top: 20px; padding: 14px 18px; border-radius: 10px;
+           background: #3d1414; border: 1px solid #7a2e2e; color: #ffb4b4; }
+  .error.show { display: block; }
+  footer { text-align: center; color: var(--muted); font-size: .82rem; margin-top: 48px; line-height: 1.7; }
+  footer b { color: var(--text); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1><span class="cart">🛒</span> Swarm Buy</h1>
+    <p>Don't take <strong>one AI's</strong> word for what to buy.<br>
+       Three expert agents debate it out — you get the <strong>verdict</strong>.</p>
+  </header>
+
+  <div class="ask">
+    <input id="q" type="text" placeholder='Try "best noise-cancelling headphones under $200"'>
+    <button id="go" onclick="debate()">⚔️ Debate it</button>
+  </div>
+  <div class="pills">
+    <button onclick="quick('best noise-cancelling headphones under $200')">🎧 Headphones under $200</button>
+    <button onclick="quick('best air fryer under $150')">🍟 Air fryer under $150</button>
+    <button onclick="quick('best air fryer for a family of 5')">👨‍👩‍👧‍👦 Air fryer for a family</button>
+  </div>
+
+  <div id="arena"></div>
+  <div id="verdict" class="verdict"></div>
+  <div id="error" class="error"></div>
+
+  <footer>
+    <b>Powered by Amazon Bedrock</b> (Nova) · AWS Lambda · Amazon S3<br>
+    Built for the Build, Ship, Shape: Amazon Developer Hackathon.<br>
+    Demo catalog of real products — prices are typical US street prices, Oct 2026.
+  </footer>
+</div>
+
+<script>
+/* ▼▼▼ PASTE YOUR LAMBDA FUNCTION URL HERE ▼▼▼ */
+const API_URL = "https://oxj5cguyr7cfw3bnq7xrp6nk6i0ackdp.lambda-url.us-east-1.on.aws/";
+/* ▲▲▲ e.g. https://abc123.lambda-url.us-east-1.on.aws/ ▲▲▲ */
+
+const AGENTS = {
+  audiophile:     { cls: "aria",  avatar: "🎧" },
+  bargain_hunter: { cls: "mack",  avatar: "💰" },
+  durability_nerd:{ cls: "rivet", avatar: "🛡️" },
+};
+
+function quick(q) { document.getElementById("q").value = q; debate(); }
+
+async function debate() {
+  const q = document.getElementById("q").value.trim();
+  if (!q) return;
+  const go = document.getElementById("go");
+  const err = document.getElementById("error");
+  err.classList.remove("show");
+  go.disabled = true; go.textContent = "Debating…";
+  document.getElementById("verdict").classList.remove("show");
+
+  const arena = document.getElementById("arena");
+  arena.innerHTML = `<div class="round-label">🥊 Round 1 — Opening arguments</div>
+    <div class="agents" id="agents"></div>`;
+
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query: q }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Debate failed.");
+
+    // Render agent cards, then "stream" the debate with a typewriter effect.
+    const grid = document.getElementById("agents");
+    for (const p of data.positions) {
+      const a = AGENTS[p.key] || { cls: "", avatar: "🤖" };
+      grid.innerHTML += `
+        <div class="agent ${a.cls}" id="card-${p.key}">
+          <div class="who"><span class="avatar">${p.emoji || a.avatar}</span>
+            <b>${p.name}<span>${p.title}</span></b></div>
+          <div class="status" id="st-${p.key}">⌛ Summoning ${p.name}…</div>
+          <div class="transcript" id="tx-${p.key}"></div>
+        </div>`;
+    }
+    for (const p of data.positions) await typewrite(p.key, p.text, "st");
+    arena.innerHTML += `<div class="round-label">⚔️ Round 2 — Rebuttals</div>
+      <div class="agents" id="rebuttals"></div>`;
+    const rgrid = document.getElementById("rebuttals");
+    for (const r of data.rebuttals) {
+      const a = AGENTS[r.key] || { cls: "", avatar: "🤖" };
+      rgrid.innerHTML += `
+        <div class="agent ${a.cls}">
+          <div class="who"><span class="avatar">${r.emoji || a.avatar}</span>
+            <b>${r.name}<span>rebuttal</span></b></div>
+          <div class="transcript" id="rtx-${r.key}"></div>
+        </div>`;
+    }
+    for (const r of data.rebuttals) await typewrite(r.key, r.text, "rtx", true);
+    showVerdict(data.verdict);
+  } catch (e) {
+    err.textContent = "⚠️ " + e.message;
+    err.classList.add("show");
+  }
+  go.disabled = false; go.textContent = "⚔️ Debate it";
+}
+
+async function typewrite(key, text, prefix, instant) {
+  const el = document.getElementById(`${prefix}-${key}`);
+  const st = document.getElementById(`st-${key}`);
+  if (st) st.textContent = "";
+  el.classList.add("typing");
+  if (instant) { el.textContent = text; el.classList.remove("typing"); return; }
+  const words = text.split(" ");
+  let out = "";
+  for (let i = 0; i < words.length; i++) {
+    out += (i ? " " : "") + words[i];
+    el.textContent = out;
+    if (i % 4 === 0) await sleep(28); // fast, lively "streaming"
+  }
+  el.classList.remove("typing");
+}
+
+function showVerdict(v) {
+  const el = document.getElementById("verdict");
+  el.innerHTML = `
+    <div class="kicker">⚖️ The verdict</div>
+    <h2>${esc(v.winner)}</h2>
+    <div class="price">$${v.winner_price}</div>
+    <p class="lead">${esc(v.verdict)}</p>
+    <div class="cols">
+      <div class="fact"><b>✅ Best for</b>${esc(v.best_for)}</div>
+      <div class="fact"><b>🚫 Skip if</b>${esc(v.skip_if)}</div>
+    </div>
+    <div class="fact" style="margin-bottom:14px"><b>🔑 Key specs</b>
+      <ul>${v.key_specs.map(s => `<li>${esc(s)}</li>`).join("")}</ul></div>
+    <div class="fact"><b>⚠️ Caveats</b>
+      <ul>${v.caveats.map(s => `<li>${esc(s)}</li>`).join("")}</ul></div>
+    <div class="runner">🥈 Runner-up: <b style="color:var(--text)">${esc(v.runner_up)}</b></div>
+    <div class="board">🗳️ Scoreboard —
+      🎧 <b>${esc(v.scoreboard.audiophile)}</b> ·
+      💰 <b>${esc(v.scoreboard.bargain_hunter)}</b> ·
+      🛡️ <b>${esc(v.scoreboard.durability_nerd)}</b></div>`;
+  el.classList.add("show");
+  el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function esc(s) { return String(s).replace(/[&<>"']/g, c =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+document.getElementById("q").addEventListener("keydown", e => { if (e.key === "Enter") debate(); });
+</script>
+</body>
+</html>
